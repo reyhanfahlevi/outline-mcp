@@ -45,7 +45,7 @@ Self-hosted Outline? Point `OUTLINE_API_URL` at your instance (default `https://
 | `outline_list_comments` | read | Comments on a document |
 | `outline_create_document` | write | Create a document (draft by default) |
 | `outline_update_document` | write | Update title / body |
-| `outline_delete_document` | destructive | Trash or permanently delete a document |
+| `outline_delete_document` | destructive | Trash a document, or permanently delete it (permanent requires `confirm` = document title) |
 | `outline_move_document` | write | Move a document |
 | `outline_create_collection` | write | Create a collection |
 | `outline_create_comment` | write | Comment on a document |

@@ -56,13 +56,16 @@ function text(result: unknown): { content: { type: "text"; text: string }[] } {
   return { content: [{ type: "text", text: out }] };
 }
 
+function fail(message: string) {
+  return { content: [{ type: "text" as const, text: `Error: ${message}` }], isError: true };
+}
+
 async function run(method: string, params: Record<string, unknown>) {
   try {
     const body = (await call(method, params)) as OutlineResponse;
     return text(body.pagination ? { data: body.data, pagination: body.pagination } : body.data);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return { content: [{ type: "text" as const, text: `Error: ${message}` }], isError: true };
+    return fail(error instanceof Error ? error.message : String(error));
   }
 }
 
@@ -225,14 +228,41 @@ server.registerTool(
   "outline_delete_document",
   {
     title: "Delete a document",
-    description: "Delete a document. Args: id (required), permanent (default false — moves to trash when false).",
+    description: `Delete a document. Args: id (required), permanent (default false — moves to trash when false),
+confirm (required when permanent is true).
+A permanent delete is irreversible, so it additionally requires confirm to exactly match the document's
+current title. Call once without confirm to be shown the title, then call again with it. To delete
+recoverably, use permanent: false and skip confirm.`,
     inputSchema: {
       id: z.string().describe("Document id"),
       permanent: z.boolean().default(false).describe("Permanently delete instead of trashing"),
+      confirm: z
+        .string()
+        .optional()
+        .describe("Must exactly equal the document title when permanent is true"),
     },
     annotations: DESTRUCTIVE,
   },
-  ({ id, permanent }) => run("documents.delete", { id, permanent }),
+  async ({ id, permanent, confirm }) => {
+    if (permanent) {
+      let title: string;
+      try {
+        const doc = (await call("documents.info", { id })) as OutlineResponse;
+        title = (doc.data as { title?: string } | undefined)?.title ?? "";
+      } catch (error) {
+        return fail(error instanceof Error ? error.message : String(error));
+      }
+      if (confirm !== title) {
+        return fail(
+          `permanent delete not confirmed.\n` +
+            `Document: "${title}" (id: ${id})\n` +
+            `Re-call with permanent: true and confirm: "${title}" to delete it forever, ` +
+            `or use permanent: false to move it to the trash instead (recoverable).`,
+        );
+      }
+    }
+    return run("documents.delete", { id, permanent });
+  },
 );
 
 server.registerTool(
