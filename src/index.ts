@@ -2,6 +2,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { isBlockedMethod } from "./guard.js";
 
 const API_URL = (process.env.OUTLINE_API_URL ?? "https://app.getoutline.com/api").replace(/\/+$/, "");
 const API_KEY = process.env.OUTLINE_API_KEY;
@@ -99,7 +100,16 @@ Returns: the method's data payload (with pagination when present).`,
     },
     annotations: READ,
   },
-  ({ method, params }) => run(method, params ?? {}),
+  ({ method, params }) => {
+    if (isBlockedMethod(method)) {
+      return fail(
+        `"${method}" is blocked in outline_call because it is destructive or access-affecting. ` +
+          `Use a dedicated tool when one exists: outline_delete_document covers documents.delete and ` +
+          `requires the document title as confirmation.`,
+      );
+    }
+    return run(method, params ?? {});
+  },
 );
 
 // ---- Read ----

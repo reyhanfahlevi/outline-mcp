@@ -54,6 +54,10 @@ Anything not listed is available through `outline_call`, e.g.
 `{"method": "documents.export", "params": {"id": "..."}}`.
 Full method list: <https://www.getoutline.com/developers>.
 
+Destructive methods (`*.delete`, `*.destroy`, `*.revoke`, `*.suspend`, `*.demote`) are refused by
+`outline_call`, so it cannot be used to bypass the guards on the dedicated tools. Permanent document
+deletion goes through `outline_delete_document`, which requires `confirm` to match the document title.
+
 ## Development
 
 ```bash
